@@ -32,6 +32,17 @@ import com.android.volley.toolbox.ImageLoader.ImageListener;
 public class NetworkImageView extends ImageView {
     /** The URL of the network image to load */
     private String mUrl;
+    private boolean rounded = false;
+    private int radius = 50;
+
+    /**
+     * Sets the image as rounded
+     * @param radius
+     */
+    public void setRounded(int radius) {
+        this.rounded = true;
+        this.radius  = radius;
+    }
 
     /**
      * Resource ID of the image to be used as a placeholder until the network image is loaded.
@@ -173,7 +184,11 @@ public class NetworkImageView extends ImageView {
                         }
 
                         if (response.getBitmap() != null) {
-                            setImageBitmap(response.getBitmap());
+                            if (rounded) {
+                                setImageBitmap(ImageHelper.getRoundedCornerBitmap(response.getBitmap(), radius));
+                            } else {
+                                setImageBitmap(response.getBitmap());
+                            }
                         } else if (mDefaultImageId != 0) {
                             setImageResource(mDefaultImageId);
                         }
@@ -187,8 +202,7 @@ public class NetworkImageView extends ImageView {
     private void setDefaultImageOrNull() {
         if(mDefaultImageId != 0) {
             setImageResource(mDefaultImageId);
-        }
-        else {
+        } else {
             setImageBitmap(null);
         }
     }
