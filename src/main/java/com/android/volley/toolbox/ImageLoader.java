@@ -49,6 +49,7 @@ public class ImageLoader {
     /** The cache implementation to be used as an L1 cache before calling into volley. */
     private final ImageCache mCache;
 
+    private AuthenticationHeader mAuthHeader;
     /**
      * HashMap of Cache keys -> BatchedImageRequest used to track in-flight requests so
      * that we can coalesce multiple requests to the same URL into a single network request.
@@ -74,6 +75,18 @@ public class ImageLoader {
     public interface ImageCache {
         public Bitmap getBitmap(String url);
         public void putBitmap(String url, Bitmap bitmap);
+    }
+
+    /**
+     * Constructs a new ImageLoader.
+     * @param queue The RequestQueue to use for making image requests.
+     * @param imageCache The cache to use as an L1 cache.
+     * @param authHeader Interface to get Authentication headers
+     */
+    public ImageLoader(RequestQueue queue, ImageCache imageCache, AuthenticationHeader authHeader) {
+        mRequestQueue = queue;
+        mCache = imageCache;
+        mAuthHeader = authHeader;
     }
 
     /**
@@ -259,7 +272,7 @@ public class ImageLoader {
             public void onErrorResponse(VolleyError error) {
                 onGetImageError(cacheKey, error);
             }
-        });
+        }, mAuthHeader);
     }
 
     /**

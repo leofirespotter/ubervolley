@@ -16,10 +16,12 @@
 
 package com.android.volley.toolbox;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.NetworkResponse;
 import com.android.volley.ParseError;
 import com.android.volley.Request;
+import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyLog;
 
@@ -27,6 +29,10 @@ import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.BitmapFactory;
 import android.widget.ImageView.ScaleType;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * A canned request for getting an image at a given URL and calling
@@ -48,6 +54,8 @@ public class ImageRequest extends Request<Bitmap> {
     private final int mMaxHeight;
     private ScaleType mScaleType;
 
+    private AuthenticationHeader mAuthHeader;
+
     /** Decoding lock so that we don't decode more than one image at a time (to avoid OOM's) */
     private static final Object sDecodeLock = new Object();
 
@@ -65,13 +73,12 @@ public class ImageRequest extends Request<Bitmap> {
      * @param maxWidth Maximum width to decode this bitmap to, or zero for none
      * @param maxHeight Maximum height to decode this bitmap to, or zero for
      *            none
-     * @param scaleType The ImageViews ScaleType used to calculate the needed image size.
      * @param decodeConfig Format to decode the bitmap to
      * @param errorListener Error listener, or null to ignore errors
      */
-    public ImageRequest(String url, Response.Listener<Bitmap> listener, int maxWidth, int maxHeight,
-            ScaleType scaleType, Config decodeConfig, Response.ErrorListener errorListener) {
-        super(Method.GET, url, errorListener); 
+    public ImageRequest(String url, Response.Listener<Bitmap> listener, int maxWidth, int maxHeight, ScaleType scaleType,
+                        Config decodeConfig, Response.ErrorListener errorListener, AuthenticationHeader authHeader) {
+        super(Method.GET, url, errorListener);
         setRetryPolicy(
                 new DefaultRetryPolicy(IMAGE_TIMEOUT_MS, IMAGE_MAX_RETRIES, IMAGE_BACKOFF_MULT));
         mListener = listener;
@@ -79,18 +86,9 @@ public class ImageRequest extends Request<Bitmap> {
         mMaxWidth = maxWidth;
         mMaxHeight = maxHeight;
         mScaleType = scaleType;
+        mAuthHeader = authHeader;
     }
 
-    /**
-     * For API compatibility with the pre-ScaleType variant of the constructor. Equivalent to
-     * the normal constructor with {@code ScaleType.CENTER_INSIDE}.
-     */
-    @Deprecated
-    public ImageRequest(String url, Response.Listener<Bitmap> listener, int maxWidth, int maxHeight,
-            Config decodeConfig, Response.ErrorListener errorListener) {
-        this(url, listener, maxWidth, maxHeight,
-                ScaleType.CENTER_INSIDE, decodeConfig, errorListener);
-    }
     @Override
     public Priority getPriority() {
         return Priority.LOW;
@@ -240,5 +238,25 @@ public class ImageRequest extends Request<Bitmap> {
         }
 
         return (int) n;
+    }
+
+    @Override
+    public Map<String, String> getHeaders() throws AuthFailureError {
+        Map<String, String> headers = super.getHeaders();
+
+        if (mAuthHeader != null) {
+            if (headers == null
+                    || headers.equals(Collections.emptyMap())) {
+                headers = new HashMap<>();
+            }
+
+            try {
+                mAuthHeader.putAuthToken(headers);
+            } catch (Exception e) {
+                throw new AuthFailureError();
+            }
+        }
+
+        return headers;
     }
 }
